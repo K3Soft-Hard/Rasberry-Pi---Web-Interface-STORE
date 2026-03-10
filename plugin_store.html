@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Plugin Store</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Light Theme (Default) */
+            --bg: #fafafa;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --card-hover: #f0f0f0;
+            --text-main: #24292e;
+            --text-muted: #57606a;
+            --accent: #3584e4; /* Flathub Blue */
+            --border: #d0d7de;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #1e1e1e;
+            --header-bg: #2d2d2d;
+            --card-bg: #2d2d2d;
+            --card-hover: #3d3d3d;
+            --text-main: #e1e1e1;
+            --text-muted: #a0a0a0;
+            --accent: #3584e4;
+            --border: #444444;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: var(--accent);
+            text-decoration: none;
+            min-width: max-content;
+        }
+
+        /* --- Search Bar --- */
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.6rem 1rem 0.6rem 2.8rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(53, 132, 228, 0.2);
+        }
+
+        /* --- Theme Toggle --- */
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--card-hover);
+        }
+
+        /* --- Main Content --- */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .section-title {
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        /* --- Grid --- */
+        .plugin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .plugin-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .plugin-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: var(--accent);
+        }
+
+        .card-top {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .icon-box {
+            width: 64px;
+            height: 64px;
+            background-color: var(--bg);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: var(--accent);
+            border: 1px solid var(--border);
+        }
+
+        .plugin-meta h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .plugin-meta span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .plugin-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .install-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+        }
+
+        .btn-install {
+            padding: 0.5rem 1rem;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-install:hover {
+            opacity: 0.9;
+        }
+
+        .btn-install.installed {
+            background-color: var(--border);
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        /* No Results */
+        .no-results {
+            text-align: center;
+            padding: 4rem;
+            grid-column: 1 / -1;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 600px) {
+            .header-content { flex-direction: column; gap: 1rem; }
+            .search-container { order: 3; width: 100%; }
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <header>
+        <div class="header-content">
+            <a href="#" class="logo">
+                <i class="fas fa-cubes"></i>
+                Pi Store
+            </a>
+            
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search plugins...">
+            </div>
+
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <h2 class="section-title">Available Plugins</h2>
+        <div class="plugin-grid" id="pluginGrid">
+            <!-- Plugins will be injected here -->
+        </div>
+    </main>
+
+    <script>
+        /* 
+           MANUAL PLUGIN LIST
+           To add a new plugin, simply add an object to this array.
+        */
+        const plugins = [
+            {
+                name: "Web Terminal",
+                author: "Official",
+                icon: "terminal",
+                description: "Fully functional bash terminal accessible via your browser. Run commands directly on your Pi.",
+                url: "#",
+                installed: true
+            },
+			{
+                name: "Server Manager",
+                author: "Official",
+                icon: "server",
+                description: "Manage file servers like SINOLOGY NAS and others. You can have as many as you want. To search in servers click on the search button.",
+                url: "#",
+                installed: false
+            },
+			{
+                name: "AI Link",
+                author: "Official",
+                icon: "microchip",
+                description: "Plugin for linking AI services like docker Open WebUI to RaspberryPi UI. Customizable options like skipping animation or oppening in new tab.",
+                url: "#",
+                installed: false
+            }
+        ];
+
+        const pluginGrid = document.getElementById('pluginGrid');
+        const searchInput = document.getElementById('searchInput');
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        // --- Theme Logic ---
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+            themeToggle.innerHTML = newTheme === 'light' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            body.setAttribute('data-theme', savedTheme);
+            themeToggle.innerHTML = savedTheme === 'light' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+        }
+
+        // --- Render Logic ---
+        function render(filter = '') {
+            pluginGrid.innerHTML = '';
+            const filtered = plugins.filter(p => 
+                p.name.toLowerCase().includes(filter.toLowerCase()) || 
+                p.description.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                pluginGrid.innerHTML = '<div class="no-results">No plugins found</div>';
+                return;
+            }
+
+            filtered.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'plugin-card';
+                const buttonText = p.installed ? 'Installed' : 'Install';
+                const buttonClass = p.installed ? 'btn-install installed' : 'btn-install';
+                const linkAttr = p.installed ? 'onclick="return false;"' : `href="${p.url}" target="_blank"`;
+
+                card.innerHTML = `
+                    <div class="card-top">
+                        <div class="icon-box">
+                            <i class="fas fa-${p.icon}"></i>
+                        </div>
+                        <div class="plugin-meta">
+                            <h3>${p.name}</h3>
+                            <span>${p.author}</span>
+                        </div>
+                    </div>
+                    <p class="plugin-desc">${p.description}</p>
+                    <div class="install-row">
+                        <a ${linkAttr} class="${buttonClass}">${buttonText}</a>
+                    </div>
+                `;
+                pluginGrid.appendChild(card);
+            });
+        }
+
+        searchInput.addEventListener('input', (e) => render(e.target.value));
+        render();
+    </script>
+</body>
+</html>
