@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="/auth.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Manager</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+        }
+
+        /* Remove Scrollbars for all browsers */
+        * {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        *::-webkit-scrollbar {
+            display: none; /* Chrome/Safari/Webkit */
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: rgba(10, 15, 25, 0.98);
+            backdrop-filter: blur(25px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        /* Hide Close button by default (PC) */
+        .btn-close {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .search-box {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 12px;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .server-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .server-item {
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            opacity: 0.7;
+        }
+
+        .server-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+            opacity: 1;
+            transform: translateX(5px);
+        }
+
+        /* Main View */
+        .main-view {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .center-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 50px;
+            border-radius: 40px;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .card-update { animation: popIn 0.4s ease-out; }
+        @keyframes popIn {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .btn-connect {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 30px;
+            box-shadow: 0 10px 20px var(--accent-glow);
+        }
+
+        .menu-toggle {
+            display: none; /* PC: Hidden */
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            z-index: 90;
+        }
+
+        /* MOBILE OVERRIDES */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .btn-close { display: block; } /* Show only on mobile */
+            .menu-toggle { display: block; } /* Show only on mobile */
+            .sidebar.open ~ .menu-toggle { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2 style="margin:0">Servers</h2>
+            <button class="btn-close" onclick="toggleSidebar(false)">✕</button>
+        </div>
+        <input type="text" id="search" class="search-box" placeholder="Search servers...">
+        <div id="server-list" class="server-list"></div>
+    </div>
+
+    <button class="menu-toggle" id="menuBtn" onclick="toggleSidebar(true)">☰ Menu</button>
+
+    <div class="main-view" onclick="if(window.innerWidth<=768) toggleSidebar(false)">
+        <div class="center-card" id="mainCard">
+            <h1 id="display-name">Select Server</h1>
+            <p id="display-ip">---.---.---.---</p>
+            <button class="btn-connect" onclick="goToSelected()">Connect Now</button>
+        </div>
+    </div>
+
+    <script>
+        let serverData = [];
+        let selectedUrl = "";
+
+        async function fetchServers() {
+            try {
+                const response = await fetch('servers.json');
+                serverData = await response.json();
+                render(serverData);
+            } catch (e) { console.error("Could not load servers.json"); }
+        }
+
+        function render(list) {
+            const container = document.getElementById('server-list');
+            container.innerHTML = "";
+            list.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'server-item';
+                item.innerHTML = `<strong>${s.name}</strong><br><small>${s.ip}</small>`;
+                
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.server-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+
+                    document.getElementById('display-name').innerText = s.name;
+                    document.getElementById('display-ip').innerText = s.ip;
+                    selectedUrl = `http://${s.ip}`;
+
+                    const card = document.getElementById('mainCard');
+                    card.classList.remove('card-update');
+                    void card.offsetWidth;
+                    card.classList.add('card-update');
+
+                    if(window.innerWidth <= 768) toggleSidebar(false);
+                };
+                container.appendChild(item);
+            });
+        }
+
+        function toggleSidebar(open) {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('menuBtn');
+            if (open) {
+                sb.classList.add('open');
+                btn.style.display = "none";
+            } else {
+                sb.classList.remove('open');
+                btn.style.display = (window.innerWidth <= 768) ? "block" : "none";
+            }
+        }
+
+        function goToSelected() {
+            if (selectedUrl) window.location.href = selectedUrl;
+        }
+
+        document.getElementById('search').oninput = (e) => {
+            render(serverData.filter(s => s.name.toLowerCase().includes(e.target.value.toLowerCase())));
+        };
+
+        fetchServers();
+    </script>
+</body>
+</html>

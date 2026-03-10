@@ -1,0 +1,5 @@
+[
+  { "name": "Sinology NAS", "ip": "192.168.1.1" },
+  { "name": "My File server", "ip": "192.168.1.1" },
+  { "name": "Old PC", "ip": "192.168.1.1" }
+]
