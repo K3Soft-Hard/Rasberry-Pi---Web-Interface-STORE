@@ -4,4 +4,5 @@ After downloading copy it to Server/plugins/ or open "Pi Transfer", select "Plug
 To enable plugin click on toggle in "Admin Panel". If its not showing restart UI and try again.
 - For creating custom plugins go to [Custom Plugins](https://github.com/K3Soft-Hard/Raspberry-Pi---Light-Web-Interface/blob/main/Creating%20Plugins.md). <br>
 - To download RaspberryPi UI go [here](https://github.com/K3Soft-Hard/Raspberry-Pi---Light-Web-Interface). <br>
+
 This page creation was assisted by Gemini AI Agent.
