@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Local Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <style>
+        .chat-bubble { border-radius: 18px; padding: 12px 16px; max-width: 85%; word-wrap: break-word; }
+        .sent { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .received { background: #e9ecef; color: #212529; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .dark .received { background: #2d3748; color: #f7fafc; }
+        .file-box { border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 12px; background: rgba(0,0,0,0.05); }
+        .dark .file-box { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 h-screen flex flex-col font-sans transition-colors duration-200 overflow-hidden text-gray-900 dark:text-gray-100">
+
+    <nav class="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-comments text-blue-500 text-2xl"></i>
+            <div>
+                <h1 class="text-sm font-black leading-tight tracking-tighter">LOCAL CHAT</h1>
+                <div class="flex items-center gap-1 text-[10px] text-gray-500 font-bold uppercase">
+                    MY ID: <input type="text" id="myID" value="1" onchange="saveIdentity()" class="bg-transparent text-blue-500 outline-none w-8">
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <button onclick="exportChat()" title="Export History" class="text-gray-500 hover:text-blue-500 transition">
+                <i class="fas fa-download"></i>
+            </button>
+            <button onclick="toggleDarkMode()" class="text-xl">
+                <i id="darkIcon" class="fas fa-moon text-gray-500"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="w-20 md:w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
+            <div class="p-3">
+                <button onclick="promptAddContact()" class="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md active:scale-95 transition">
+                    <i class="fas fa-plus mr-1"></i> <span class="hidden md:inline">ADD CONTACT</span>
+                </button>
+            </div>
+            <div id="contactList" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-slate-100 dark:bg-gray-950">
+            <header id="chatHeader" class="h-12 px-6 flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                Select a user to chat
+            </header>
+
+            <div id="chatWindow" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-6"></div>
+
+            <footer class="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+                <div class="max-w-4xl mx-auto flex items-center gap-3">
+                    <label class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full cursor-pointer hover:text-blue-500 transition shadow-inner">
+                        <i class="fas fa-file-arrow-up text-lg"></i>
+                        <input type="file" id="fileInput" accept=".txt" class="hidden" onchange="processFile(this)">
+                    </label>
+                    <input type="text" id="msgInput" placeholder="Enter message..." disabled
+                           class="flex-1 h-12 bg-gray-100 dark:bg-gray-700 rounded-2xl px-5 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <button id="sendBtn" onclick="sendMessage()" disabled class="w-12 h-12 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl opacity-40 active:scale-90 transition">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        let contacts = JSON.parse(localStorage.getItem('lc_contacts')) || [{id: '2', name: 'Peer 2'}];
+        let messages = JSON.parse(localStorage.getItem('lc_messages')) || [];
+        let activeID = null;
+
+        window.onload = () => {
+            if(localStorage.getItem('darkMode') === 'true') toggleDarkMode(true);
+            const savedID = localStorage.getItem('my_peer_id');
+            if(savedID) document.getElementById('myID').value = savedID;
+            renderContacts();
+        };
+
+        function toggleDarkMode(init = false) {
+            const html = document.documentElement;
+            const icon = document.getElementById('darkIcon');
+            let isDark = init ? localStorage.getItem('darkMode') === 'true' : html.classList.toggle('dark');
+            
+            if(isDark) {
+                html.classList.add('dark');
+                icon.className = 'fas fa-sun';
+                icon.style.color = '#fbbf24';
+            } else {
+                html.classList.remove('dark');
+                icon.className = 'fas fa-moon';
+                icon.style.color = '#6b7280';
+            }
+            if(!init) localStorage.setItem('darkMode', isDark);
+        }
+
+        function saveIdentity() {
+            localStorage.setItem('my_peer_id', document.getElementById('myID').value);
+            renderChat();
+        }
+
+        function promptAddContact() {
+            const name = prompt("Contact Nickname:");
+            const id = prompt("Contact ID:");
+            if(name && id) {
+                contacts.push({ name, id });
+                localStorage.setItem('lc_contacts', JSON.stringify(contacts));
+                renderContacts();
+            }
+        }
+
+        function renderContacts() {
+            const list = document.getElementById('contactList');
+            list.innerHTML = '';
+            contacts.forEach(c => {
+                const isActive = activeID === c.id;
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between ${isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50'}`;
+                div.onclick = () => {
+                    activeID = c.id;
+                    document.getElementById('chatHeader').innerText = `CHAT: ${c.name} (#${c.id})`;
+                    document.getElementById('msgInput').disabled = false;
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('sendBtn').style.opacity = "1";
+                    renderContacts();
+                    renderChat();
+                };
+                div.innerHTML = `
+                    <div class="overflow-hidden">
+                        <p class="font-bold text-xs truncate">${c.name}</p>
+                        <p class="text-[9px] ${isActive ? 'text-blue-200' : 'text-gray-400'}">ID: ${c.id}</p>
+                    </div>
+                    <i class="fas fa-xmark text-[10px] opacity-30 hover:opacity-100" onclick="event.stopPropagation(); deleteContact('${c.id}')"></i>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function deleteContact(id) {
+            contacts = contacts.filter(c => c.id !== id);
+            localStorage.setItem('lc_contacts', JSON.stringify(contacts));
+            renderContacts();
+        }
+
+        // --- FIXED FILE LOGIC ---
+        function processFile(input) {
+            const file = input.files[0];
+            if (!file || !activeID) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Convert text to Base64 to prevent "damage"
+                const content = btoa(unescape(encodeURIComponent(e.target.result)));
+                sendMessage(content, true, file.name);
+                input.value = ''; // Reset input
+            };
+            reader.readAsText(file);
+        }
+
+        function sendMessage(text = null, isFile = false, fileName = "") {
+            const textInput = document.getElementById('msgInput');
+            const content = text || textInput.value;
+            const myID = document.getElementById('myID').value;
+
+            if(!content.trim() || !activeID) return;
+
+            const msg = {
+                sender: myID,
+                receiver: activeID,
+                text: content,
+                isFile: isFile,
+                fileName: fileName,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            messages.push(msg);
+            localStorage.setItem('lc_messages', JSON.stringify(messages));
+            if(!text) textInput.value = '';
+            renderChat();
+        }
+
+        function renderChat() {
+            const win = document.getElementById('chatWindow');
+            const myID = document.getElementById('myID').value;
+            win.innerHTML = '';
+
+            messages.filter(m => (m.sender === myID && m.receiver === activeID) || (m.sender === activeID && m.receiver === myID))
+            .forEach(m => {
+                const isMe = m.sender === myID;
+                const div = document.createElement('div');
+                div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+                
+                let bodyHtml = `<p class="text-sm">${m.text}</p>`;
+                if(m.isFile) {
+                    bodyHtml = `
+                        <div class="file-box">
+                            <div class="flex items-center gap-3 mb-3">
+                                <i class="fas fa-file-code text-blue-500 text-xl"></i>
+                                <div class="overflow-hidden">
+                                    <p class="text-[10px] font-black truncate w-24">${m.fileName}</p>
+                                    <p class="text-[8px] text-gray-400">TEXT DOCUMENT</p>
+                                </div>
+                            </div>
+                            <button onclick="downloadFixed('${m.text}', '${m.fileName}')" class="w-full py-2 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-md hover:bg-blue-700 transition">
+                                <i class="fas fa-download mr-1"></i> SAVE FILE
+                            </button>
+                        </div>
+                    `;
+                }
+
+                div.innerHTML = `
+                    <div class="chat-bubble ${isMe ? 'sent shadow-md' : 'received shadow-sm'}">
+                        ${bodyHtml}
+                    </div>
+                    <span class="text-[9px] text-gray-400 mt-1 font-bold px-1">${m.time}</span>
+                `;
+                win.appendChild(div);
+            });
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function downloadFixed(b64, name) {
+            try {
+                // Decode from Base64 back to UTF-8
+                const decoded = decodeURIComponent(escape(atob(b64)));
+                const blob = new Blob([decoded], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = name || "file.txt";
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Error decoding file.");
+            }
+        }
+
+        function exportChat() {
+            const blob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `LocalChat_Backup.json`;
+            a.click();
+        }
+
+        document.getElementById('msgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+    </script>
+</body>
+</html>
