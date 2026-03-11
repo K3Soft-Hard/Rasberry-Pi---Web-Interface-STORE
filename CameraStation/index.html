@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Station</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --accent: #3584e4;
+            --accent-glow: rgba(53, 132, 228, 0.3);
+            --text-main: #f0f0f0;
+            --text-muted: #94a3b8;
+            --border: #2d2d35;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .title-group i {
+            font-size: 2rem;
+            color: var(--accent);
+            text-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .edit-link {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+
+        .edit-link:hover {
+            color: var(--accent);
+        }
+
+        /* --- Controls --- */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-grow: 1;
+            justify-content: flex-end;
+        }
+
+        .search-wrapper {
+            position: relative;
+            max-width: 300px;
+            width: 100%;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.8rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        .filter-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* --- Camera Grid --- */
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .camera-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .camera-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px 2px var(--accent-glow);
+        }
+
+        .stream-thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background-color: #000;
+            display: block;
+            object-fit: cover;
+        }
+
+        .camera-info {
+            padding: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .camera-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .fav-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .fav-btn.active {
+            color: #f1c40f;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        /* --- Modal --- */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 2rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-stream-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            background: #000;
+        }
+
+        .modal-stream {
+            width: 100%;
+            display: block;
+        }
+
+        .modal-toolbar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .tool-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tool-btn.site-btn:hover {
+            background: #8e44ad; /* Distinct color for Open Site */
+            border-color: #8e44ad;
+        }
+
+        .tool-btn.server-btn:hover {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: #e74c3c;
+        }
+
+        /* --- Loading/No results --- */
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 5rem;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        #notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            display: none;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="title-group">
+                <i class="fas fa-video"></i>
+                <h1>Camera Station Pro</h1>
+            </div>
+            <a href="../../editor.html" class="edit-link" title="Open Editor">
+                <i class="fas fa-pen-to-square"></i>
+            </a>
+        </div>
+        
+        <div class="controls">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search cameras...">
+            </div>
+            <button class="filter-btn" id="filterFavs">
+                <i class="fas fa-star"></i>
+                Favorites
+            </button>
+        </div>
+    </header>
+
+    <div class="camera-grid" id="cameraGrid">
+        </div>
+
+    <div class="modal" id="cameraModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">Camera Name</h2>
+                <div class="modal-toolbar">
+                    <button class="tool-btn site-btn" id="openSite">
+                        <i class="fas fa-external-link-alt"></i>
+                        Open Site
+                    </button>
+                    <button class="tool-btn" id="downloadSnap">
+                        <i class="fas fa-download"></i>
+                        Local Snap
+                    </button>
+                    <button class="tool-btn server-btn" id="serverSnap">
+                        <i class="fas fa-server"></i>
+                        Server Snap
+                    </button>
+                    <button class="tool-btn" id="toggleFullscreen">
+                        <i class="fas fa-expand"></i>
+                        Fullscreen
+                    </button>
+                    <button class="close-btn" id="closeModal">&times;</button>
+                </div>
+            </div>
+            <div class="modal-stream-wrapper" id="streamWrapper">
+                <img src="" alt="Stream" class="modal-stream" id="modalStream" crossorigin="anonymous">
+            </div>
+        </div>
+    </div>
+
+    <div id="notification"></div>
+
+    <script>
+        let allCameras = [];
+        let favorites = JSON.parse(localStorage.getItem('camera_favs') || '[]');
+        let showOnlyFavs = false;
+        let currentCam = null;
+
+        const cameraGrid = document.getElementById('cameraGrid');
+        const searchInput = document.getElementById('searchInput');
+        const filterFavs = document.getElementById('filterFavs');
+        const modal = document.getElementById('cameraModal');
+        const modalStream = document.getElementById('modalStream');
+        const modalTitle = document.getElementById('modalTitle');
+        const streamWrapper = document.getElementById('streamWrapper');
+        const notification = document.getElementById('notification');
+
+        async function init() {
+            try {
+                const response = await fetch('cameras.json');
+                allCameras = await response.json();
+                render();
+                setupGlobalListeners();
+            } catch (err) {
+                cameraGrid.innerHTML = '<div class="no-results">Error loading cameras.json</div>';
+            }
+        }
+
+        function render() {
+            const query = searchInput.value.toLowerCase();
+            const filtered = allCameras.filter(cam => {
+                const matchesSearch = cam.name.toLowerCase().includes(query);
+                const matchesFav = showOnlyFavs ? favorites.includes(cam.id) : true;
+                return matchesSearch && matchesFav;
+            });
+
+            cameraGrid.innerHTML = '';
+            if (filtered.length === 0) {
+                cameraGrid.innerHTML = '<div class="no-results">No cameras found matching your criteria.</div>';
+                return;
+            }
+
+            filtered.forEach(cam => {
+                const isFav = favorites.includes(cam.id);
+                const card = document.createElement('div');
+                card.className = 'camera-card';
+                card.innerHTML = `
+                    <img src="${cam.url}" class="stream-thumb" alt="${cam.name}" loading="lazy">
+                    <div class="camera-info">
+                        <div style="display:flex; align-items:center; gap:0.5rem">
+                            <div class="status-dot"></div>
+                            <span class="camera-name">${cam.name}</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="fav-btn ${isFav ? 'active' : ''}" data-id="${cam.id}">
+                                <i class="${isFav ? 'fas' : 'far'} fa-star"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                card.onclick = (e) => {
+                    if (e.target.closest('.fav-btn')) return;
+                    openModal(cam);
+                };
+
+                card.querySelector('.fav-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(cam.id);
+                };
+
+                cameraGrid.appendChild(card);
+            });
+        }
+
+        function toggleFavorite(id) {
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(fid => fid !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('camera_favs', JSON.stringify(favorites));
+            render();
+        }
+
+        function openModal(cam) {
+            currentCam = cam;
+            modalStream.src = cam.url;
+            modalTitle.textContent = cam.name;
+            modal.classList.add('active');
+        }
+
+        function notify(text) {
+            notification.textContent = text;
+            notification.style.display = 'block';
+            setTimeout(() => { notification.style.display = 'none'; }, 3000);
+        }
+
+        function setupGlobalListeners() {
+            searchInput.oninput = () => render();
+            
+            filterFavs.onclick = () => {
+                showOnlyFavs = !showOnlyFavs;
+                filterFavs.classList.toggle('active');
+                render();
+            };
+
+            document.getElementById('closeModal').onclick = () => {
+                modal.classList.remove('active');
+                modalStream.src = '';
+                if (document.fullscreenElement) document.exitFullscreen();
+            };
+
+            // New Open Site Logic
+            document.getElementById('openSite').onclick = () => {
+                if (!currentCam) return;
+                // Use 'site' if provided and not empty, otherwise fallback to 'url'
+                const targetUrl = (currentCam.site && currentCam.site.trim() !== "") 
+                                  ? currentCam.site 
+                                  : currentCam.url;
+                window.open(targetUrl, '_blank');
+            };
+
+            document.getElementById('downloadSnap').onclick = async () => {
+                if (!currentCam) return;
+                notify("Attempting local snapshot...");
+                try {
+                    const response = await fetch(currentCam.url, { mode: 'cors' });
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `local-${currentCam.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.jpg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    notify("Local snapshot saved!");
+                } catch (err) {
+                    notify("CORS Error: Local snap blocked. Use Server Snap.");
+                }
+            };
+
+            document.getElementById('serverSnap').onclick = async () => {
+                if (!currentCam) return;
+                notify("Sending server snapshot command...");
+                const filename = `snap_${currentCam.name.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+                const cmd = `curl -L -o ./photo/${filename} "${currentCam.url}"`;
+                
+                try {
+                    const response = await fetch('/terminal/api', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: cmd })
+                    });
+                    if (response.ok) {
+                        notify("Success! Saved to Pi: photo/" + filename);
+                    } else {
+                        notify("Server Error: API rejected command.");
+                    }
+                } catch (err) {
+                    notify("Network Error: Is the Pi server running?");
+                }
+            };
+
+            document.getElementById('toggleFullscreen').onclick = () => {
+                if (!document.fullscreenElement) {
+                    streamWrapper.requestFullscreen().catch(err => {
+                        notify(`Fullscreen error: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            };
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    modal.classList.remove('active');
+                    modalStream.src = '';
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

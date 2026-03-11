@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "name": "Garage",
+    "url": "Video Stream",
+	"site": "Admin Panel"
+  },
+  {
+    "id": 1,
+    "name": "Kitchen",
+    "url": "Video Stream",
+	"site": "Admin Panel"
+  },
+  {
+    "id": 1,
+    "name": "Bedroom",
+    "url": "Video Stream",
+	"site": "Admin Panel"
+  }
+]
