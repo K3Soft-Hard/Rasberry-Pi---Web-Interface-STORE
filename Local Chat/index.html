@@ -8,72 +8,69 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        .chat-bubble { border-radius: 18px; padding: 12px 16px; max-width: 85%; word-wrap: break-word; }
+        .chat-bubble { border-radius: 18px; padding: 12px 16px; max-width: 85%; word-wrap: break-word; position: relative; }
         .sent { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .received { background: #e9ecef; color: #212529; align-self: flex-start; border-bottom-left-radius: 4px; }
         .dark .received { background: #2d3748; color: #f7fafc; }
-        .file-box { border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 12px; background: rgba(0,0,0,0.05); }
+        .file-box { border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 10px; background: rgba(0,0,0,0.05); min-width: 200px; }
         .dark .file-box { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        .preview-content { width: 100%; height: 100px; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 8px; cursor: pointer; }
+        @media (max-width: 768px) { .sidebar-hidden { display: none; } }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 h-screen flex flex-col font-sans transition-colors duration-200 overflow-hidden text-gray-900 dark:text-gray-100">
+<body class="bg-gray-50 dark:bg-gray-900 h-screen flex flex-col font-sans overflow-hidden text-gray-900 dark:text-gray-100">
 
-    <nav class="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 flex items-center justify-between shadow-sm">
+    <nav class="h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 flex items-center justify-between shadow-sm z-10">
         <div class="flex items-center gap-3">
+            <button id="backBtn" onclick="toggleMobileView('list')" class="md:hidden text-gray-500 mr-2 hidden"><i class="fas fa-arrow-left"></i></button>
             <i class="fas fa-comments text-blue-500 text-2xl"></i>
             <div>
-                <h1 class="text-sm font-black leading-tight tracking-tighter">LOCAL CHAT</h1>
-                <div class="flex items-center gap-1 text-[10px] text-gray-500 font-bold uppercase">
-                    MY ID: <input type="text" id="myID" value="1" onchange="saveIdentity()" class="bg-transparent text-blue-500 outline-none w-8">
+                <h1 class="text-sm font-black uppercase tracking-tighter">Local Chat</h1>
+                <div class="text-[10px] text-gray-500 font-bold uppercase">
+                    ID: <input type="text" id="myID" value="1" onchange="saveIdentity()" class="bg-transparent text-blue-500 outline-none w-8">
                 </div>
             </div>
         </div>
         
         <div class="flex items-center gap-4">
-            <button onclick="exportChat()" title="Export History" class="text-gray-500 hover:text-blue-500 transition">
-                <i class="fas fa-download"></i>
-            </button>
-            <button onclick="toggleDarkMode()" class="text-xl">
-                <i id="darkIcon" class="fas fa-moon text-gray-500"></i>
-            </button>
+            <button onclick="exportChat()" title="Download History" class="text-gray-500 hover:text-blue-500"><i class="fas fa-download"></i></button>
+            <button onclick="loadMessages()" title="Sync" class="text-gray-500 hover:text-blue-500"><i class="fas fa-sync-alt"></i></button>
+            <button onclick="toggleDarkMode()" class="text-xl"><i id="darkIcon" class="fas fa-moon"></i></button>
         </div>
     </nav>
 
     <div class="flex flex-1 overflow-hidden">
-        <aside class="w-20 md:w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
+        <aside id="sidebar" class="w-full md:w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
             <div class="p-3">
-                <button onclick="promptAddContact()" class="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md active:scale-95 transition">
-                    <i class="fas fa-plus mr-1"></i> <span class="hidden md:inline">ADD CONTACT</span>
+                <button onclick="promptAddContact()" class="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition">
+                    ADD CONTACT
                 </button>
             </div>
             <div id="contactList" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
         </aside>
 
-        <main class="flex-1 flex flex-col bg-slate-100 dark:bg-gray-950">
-            <header id="chatHeader" class="h-12 px-6 flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                Select a user to chat
+        <main id="chatMain" class="hidden md:flex flex-1 flex-col bg-slate-100 dark:bg-gray-950">
+            <header id="chatHeader" class="h-12 px-6 flex items-center text-[10px] font-bold text-gray-400 uppercase border-b dark:border-gray-800">
+                Select a contact
             </header>
-
-            <div id="chatWindow" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-6"></div>
-
-            <footer class="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
-                <div class="max-w-4xl mx-auto flex items-center gap-3">
-                    <label class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full cursor-pointer hover:text-blue-500 transition shadow-inner">
-                        <i class="fas fa-file-arrow-up text-lg"></i>
-                        <input type="file" id="fileInput" accept=".txt" class="hidden" onchange="processFile(this)">
+            <div id="chatWindow" class="flex-1 overflow-y-auto p-4 flex flex-col space-y-4"></div>
+            <footer class="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+                <div class="max-w-4xl mx-auto flex items-center gap-2">
+                    <label class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full cursor-pointer"><i class="fas fa-paperclip text-gray-500"></i>
+                        <input type="file" id="fileInput" class="hidden" onchange="handleFileUpload(this)">
                     </label>
-                    <input type="text" id="msgInput" placeholder="Enter message..." disabled
-                           class="flex-1 h-12 bg-gray-100 dark:bg-gray-700 rounded-2xl px-5 outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                    <button id="sendBtn" onclick="sendMessage()" disabled class="w-12 h-12 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl opacity-40 active:scale-90 transition">
-                        <i class="fas fa-paper-plane"></i>
+                    <button onclick="promptForPath()" class="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200">
+                        <i class="fas fa-link text-green-500"></i>
                     </button>
+                    <input type="text" id="msgInput" placeholder="Message..." disabled class="flex-1 h-10 bg-gray-100 dark:bg-gray-700 rounded-full px-5 outline-none text-sm">
+                    <button id="sendBtn" onclick="sendMessage()" disabled class="w-10 h-10 text-blue-600 opacity-40"><i class="fas fa-paper-plane text-xl"></i></button>
                 </div>
             </footer>
         </main>
     </div>
 
     <script>
-        let contacts = JSON.parse(localStorage.getItem('lc_contacts')) || [{id: '2', name: 'Peer 2'}];
+        let contacts = JSON.parse(localStorage.getItem('lc_contacts')) || [];
         let messages = JSON.parse(localStorage.getItem('lc_messages')) || [];
         let activeID = null;
 
@@ -81,39 +78,45 @@
             if(localStorage.getItem('darkMode') === 'true') toggleDarkMode(true);
             const savedID = localStorage.getItem('my_peer_id');
             if(savedID) document.getElementById('myID').value = savedID;
+            loadMessages();
             renderContacts();
         };
 
-        function toggleDarkMode(init = false) {
-            const html = document.documentElement;
-            const icon = document.getElementById('darkIcon');
-            let isDark = init ? localStorage.getItem('darkMode') === 'true' : html.classList.toggle('dark');
-            
-            if(isDark) {
-                html.classList.add('dark');
-                icon.className = 'fas fa-sun';
-                icon.style.color = '#fbbf24';
+        function toggleMobileView(view) {
+            const sidebar = document.getElementById('sidebar');
+            const chatMain = document.getElementById('chatMain');
+            const backBtn = document.getElementById('backBtn');
+            if (view === 'chat') {
+                sidebar.classList.add('sidebar-hidden');
+                chatMain.classList.remove('hidden'); chatMain.classList.add('flex');
+                backBtn.classList.remove('hidden');
             } else {
-                html.classList.remove('dark');
-                icon.className = 'fas fa-moon';
-                icon.style.color = '#6b7280';
+                sidebar.classList.remove('sidebar-hidden');
+                chatMain.classList.add('hidden'); chatMain.classList.remove('flex');
+                backBtn.classList.add('hidden');
             }
-            if(!init) localStorage.setItem('darkMode', isDark);
         }
 
-        function saveIdentity() {
-            localStorage.setItem('my_peer_id', document.getElementById('myID').value);
+        async function loadMessages() {
+            try {
+                const res = await fetch('../../chats.json');
+                if (res.ok) {
+                    messages = await res.json();
+                    localStorage.setItem('lc_messages', JSON.stringify(messages));
+                }
+            } catch (e) { console.log("Server file not found, using local storage."); }
             renderChat();
         }
 
-        function promptAddContact() {
-            const name = prompt("Contact Nickname:");
-            const id = prompt("Contact ID:");
-            if(name && id) {
-                contacts.push({ name, id });
-                localStorage.setItem('lc_contacts', JSON.stringify(contacts));
-                renderContacts();
-            }
+        async function saveMessages() {
+            localStorage.setItem('lc_messages', JSON.stringify(messages));
+            try {
+                await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: 'chats.json', content: JSON.stringify(messages, null, 2) })
+                });
+            } catch (e) { console.warn("Server save unavailable."); }
         }
 
         function renderContacts() {
@@ -122,23 +125,18 @@
             contacts.forEach(c => {
                 const isActive = activeID === c.id;
                 const div = document.createElement('div');
-                div.className = `p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between ${isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50'}`;
+                div.className = `p-3 rounded-xl cursor-pointer flex items-center justify-between ${isActive ? 'bg-blue-600 text-white shadow-md' : 'bg-white dark:bg-gray-800'}`;
                 div.onclick = () => {
                     activeID = c.id;
-                    document.getElementById('chatHeader').innerText = `CHAT: ${c.name} (#${c.id})`;
+                    document.getElementById('chatHeader').innerText = `CHAT: ${c.name}`;
                     document.getElementById('msgInput').disabled = false;
                     document.getElementById('sendBtn').disabled = false;
                     document.getElementById('sendBtn').style.opacity = "1";
-                    renderContacts();
-                    renderChat();
+                    if(window.innerWidth < 768) toggleMobileView('chat');
+                    renderContacts(); renderChat();
                 };
-                div.innerHTML = `
-                    <div class="overflow-hidden">
-                        <p class="font-bold text-xs truncate">${c.name}</p>
-                        <p class="text-[9px] ${isActive ? 'text-blue-200' : 'text-gray-400'}">ID: ${c.id}</p>
-                    </div>
-                    <i class="fas fa-xmark text-[10px] opacity-30 hover:opacity-100" onclick="event.stopPropagation(); deleteContact('${c.id}')"></i>
-                `;
+                div.innerHTML = `<div class="truncate"><p class="font-bold text-xs">${c.name}</p><p class="text-[9px] opacity-60">ID: ${c.id}</p></div>
+                                 <i class="fas fa-times text-[10px] p-2 opacity-30 hover:opacity-100" onclick="event.stopPropagation(); deleteContact('${c.id}')"></i>`;
                 list.appendChild(div);
             });
         }
@@ -146,43 +144,41 @@
         function deleteContact(id) {
             contacts = contacts.filter(c => c.id !== id);
             localStorage.setItem('lc_contacts', JSON.stringify(contacts));
+            if(activeID === id) activeID = null;
             renderContacts();
         }
 
-        // --- FIXED FILE LOGIC ---
-        function processFile(input) {
+        function handleFileUpload(input) {
             const file = input.files[0];
             if (!file || !activeID) return;
-
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Convert text to Base64 to prevent "damage"
-                const content = btoa(unescape(encodeURIComponent(e.target.result)));
-                sendMessage(content, true, file.name);
-                input.value = ''; // Reset input
+                const b64 = btoa(unescape(encodeURIComponent(e.target.result)));
+                sendMessage(`{!file=${file.name}}(${b64})`);
             };
             reader.readAsText(file);
+            input.value = '';
         }
 
-        function sendMessage(text = null, isFile = false, fileName = "") {
-            const textInput = document.getElementById('msgInput');
-            const content = text || textInput.value;
+        function promptForPath() {
+            if (!activeID) return;
+            const path = prompt("Enter Server Path (e.g., ../photo/img.png):");
+            if (path) sendMessage(`{!path=${path}}`);
+        }
+
+        async function sendMessage(manualContent = null) {
+            const input = document.getElementById('msgInput');
+            const content = manualContent || input.value;
             const myID = document.getElementById('myID').value;
+            if (!content || !activeID) return;
 
-            if(!content.trim() || !activeID) return;
-
-            const msg = {
-                sender: myID,
-                receiver: activeID,
-                text: content,
-                isFile: isFile,
-                fileName: fileName,
+            messages.push({
+                sender: myID, receiver: activeID, text: content,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
+            });
 
-            messages.push(msg);
-            localStorage.setItem('lc_messages', JSON.stringify(messages));
-            if(!text) textInput.value = '';
+            if(!manualContent) input.value = '';
+            await saveMessages();
             renderChat();
         }
 
@@ -197,57 +193,55 @@
                 const div = document.createElement('div');
                 div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
                 
-                let bodyHtml = `<p class="text-sm">${m.text}</p>`;
-                if(m.isFile) {
-                    bodyHtml = `
-                        <div class="file-box">
-                            <div class="flex items-center gap-3 mb-3">
-                                <i class="fas fa-file-code text-blue-500 text-xl"></i>
-                                <div class="overflow-hidden">
-                                    <p class="text-[10px] font-black truncate w-24">${m.fileName}</p>
-                                    <p class="text-[8px] text-gray-400">TEXT DOCUMENT</p>
-                                </div>
-                            </div>
-                            <button onclick="downloadFixed('${m.text}', '${m.fileName}')" class="w-full py-2 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-md hover:bg-blue-700 transition">
-                                <i class="fas fa-download mr-1"></i> SAVE FILE
-                            </button>
+                let bodyHtml = '';
+                const fileMatch = m.text.match(/^{!file=(.*)}\((.*)\)$/s);
+                const pathMatch = m.text.match(/^{!path=(.*)}$/);
+
+                if (fileMatch) {
+                    bodyHtml = `<div class="file-box"><span class="text-[10px] font-bold">${fileMatch[1]}</span><br>
+                                <button onclick="downloadFile('${fileMatch[2]}', '${fileMatch[1]}')" class="mt-2 w-full py-1 bg-blue-600 text-white rounded text-[10px]">DOWNLOAD</button></div>`;
+                } else if (pathMatch) {
+                    const path = pathMatch[1];
+                    const isImg = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(path);
+                    bodyHtml = `<div class="file-box">
+                        <div class="preview-content" onclick="window.open('${path}', '_blank')">
+                            ${isImg ? `<img src="${path}" class="w-full h-full object-cover">` : `<iframe src="${path}" class="w-full h-full pointer-events-none" frameborder="0"></iframe>`}
                         </div>
-                    `;
+                        <button onclick="window.open('${path}', '_blank')" class="w-full py-1 bg-green-600 text-white rounded text-[10px] font-bold">OPEN FULL FILE</button>
+                    </div>`;
+                } else {
+                    bodyHtml = `<p class="text-sm">${m.text}</p>`;
                 }
 
-                div.innerHTML = `
-                    <div class="chat-bubble ${isMe ? 'sent shadow-md' : 'received shadow-sm'}">
-                        ${bodyHtml}
-                    </div>
-                    <span class="text-[9px] text-gray-400 mt-1 font-bold px-1">${m.time}</span>
-                `;
+                div.innerHTML = `<div class="chat-bubble ${isMe ? 'sent shadow-md' : 'received shadow-sm'}">${bodyHtml}</div>
+                                 <span class="text-[9px] text-gray-400 mt-1 font-bold px-1">${m.time}</span>`;
                 win.appendChild(div);
             });
             win.scrollTop = win.scrollHeight;
         }
 
-        function downloadFixed(b64, name) {
-            try {
-                // Decode from Base64 back to UTF-8
-                const decoded = decodeURIComponent(escape(atob(b64)));
-                const blob = new Blob([decoded], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = name || "file.txt";
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (err) {
-                alert("Error decoding file.");
-            }
+        function downloadFile(b64, name) {
+            const blob = new Blob([decodeURIComponent(escape(atob(b64)))], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
         }
 
         function exportChat() {
             const blob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `LocalChat_Backup.json`;
-            a.click();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "chats.json"; a.click();
+        }
+
+        function saveIdentity() { localStorage.setItem('my_peer_id', document.getElementById('myID').value); renderChat(); }
+        
+        function toggleDarkMode(init=false) {
+            const isDark = init ? localStorage.getItem('darkMode') === 'true' : document.documentElement.classList.toggle('dark');
+            document.getElementById('darkIcon').className = isDark ? 'fas fa-sun text-yellow-400' : 'fas fa-moon';
+            if(isDark) document.documentElement.classList.add('dark');
+            if(!init) localStorage.setItem('darkMode', isDark);
+        }
+
+        function promptAddContact() {
+            const name = prompt("Name:"); const id = prompt("ID:");
+            if(name && id) { contacts.push({name, id}); localStorage.setItem('lc_contacts', JSON.stringify(contacts)); renderContacts(); }
         }
 
         document.getElementById('msgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
